@@ -1,20 +1,21 @@
 <?php
-// Permite que React (en el puerto 5173) acceda a los datos
+// Permitir que React acceda a los datos
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json; charset=UTF-8");
 
-// El "../" le dice a PHP: "Sal de la carpeta models y busca la carpeta config"
+// Importar la conexión a la base de datos
 require_once __DIR__ . '/../config/Database.php';
 
 $database = new Database();
 $db = $database->getConnection();
 
-$query = "SELECT id, titulo, precio, descripcion, imagen_url FROM items";
+// Consulta incluyendo categoria_id y stock para que React pueda filtrar y mostrar disponibilidad
+$query = "SELECT id, titulo, precio, descripcion, imagen_url, categoria_id, stock FROM items";
 $stmt = $db->prepare($query);
 $stmt->execute();
+
+// Obtener todos los resultados como un array asociativo
 $productos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Enviar el JSON
 echo json_encode($productos);
-?>

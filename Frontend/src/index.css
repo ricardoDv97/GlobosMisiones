@@ -1,1 +1,11 @@
 @import "tailwindcss";
+
+.swiper-slide {
+  transition: transform 0.3s;
+}
+
+/* Hace que la slide activa se vea más nítida */
+.swiper-slide-active {
+  transform: scale(1.1);
+  z-index: 10;
+}

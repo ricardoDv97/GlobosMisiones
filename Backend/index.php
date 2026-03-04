@@ -11,6 +11,6 @@ if($db){
 } else {
     echo "<h1 style='color: #e74c3c;'>❌ Error de conexión.</h1>";
 }
-?>
+
 
 
