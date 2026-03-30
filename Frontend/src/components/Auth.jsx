@@ -10,11 +10,7 @@ const Auth = ({ setUser }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-        
-        const url = isLogin 
-            ? 'http://localhost/GlobosMisiones/Backend/models/Login.php' 
-            : 'http://localhost/GlobosMisiones/Backend/models/Registro.php';
-
+        const url = isLogin ? 'http://localhost/GlobosMisiones/Backend/models/Login.php' : 'http://localhost/GlobosMisiones/Backend/models/Registro.php';
         try {
             const response = await fetch(url, {
                 method: 'POST',
@@ -22,64 +18,64 @@ const Auth = ({ setUser }) => {
                 body: JSON.stringify(formData)
             });
             const data = await response.json();
-
             if (data.success) {
                 if (isLogin) {
                     localStorage.setItem('user', JSON.stringify(data.user));
                     setUser(data.user);
-                    navigate('/'); // Volver a la tienda al loguearse
+                    navigate('/');
                 } else {
-                    alert("Registro exitoso, ahora inicia sesión");
+                    alert("¡Cuenta creada! Ahora inicia sesión.");
                     setIsLogin(true);
                 }
-            } else {
-                setError(data.message);
-            }
-        } catch (err) {
-            setError("Error de conexión con el servidor");
-        }
+            } else { setError(data.message); }
+        } catch (err) { setError("Error de conexión con el servidor"); }
     };
 
     return (
-        <div className="max-w-md mx-auto my-20 p-8 bg-white rounded-3xl shadow-2xl border border-pink-100">
-            <h2 className="text-3xl font-black text-gray-800 text-center uppercase italic mb-6">
-                {isLogin ? '¡Hola de nuevo!' : 'Crea tu cuenta'}
-            </h2>
-            
-            {error && <p className="bg-red-100 text-red-600 p-3 rounded-lg text-center mb-4 font-bold">{error}</p>}
+        <div className="min-h-[70vh] flex items-center justify-center p-4">
+            <div className="w-full max-w-md bg-white rounded-[3rem] shadow-2xl p-10 border-8 border-pink-50 border-double">
+                <div className="text-center mb-8">
+                    <h2 className="text-4xl font-black text-gray-800 uppercase italic tracking-tighter">
+                        {isLogin ? '¡Hola!' : 'Unete'}
+                    </h2>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-pink-500 mt-2">Mundo de Globos</p>
+                </div>
+                
+                {error && <p className="bg-red-50 text-red-500 p-4 rounded-2xl text-center mb-6 font-black text-[10px] uppercase tracking-widest border border-red-100">{error}</p>}
 
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {!isLogin && (
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                    {!isLogin && (
+                        <input 
+                            type="text" placeholder="Nombre Completo" 
+                            className="p-5 rounded-2xl bg-pink-50/50 border-2 border-transparent outline-none focus:border-pink-500 focus:bg-white transition-all font-bold"
+                            onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                            required
+                        />
+                    )}
                     <input 
-                        type="text" placeholder="Tu Nombre" 
-                        className="p-3 rounded-xl border-2 border-pink-50 outline-none focus:border-pink-500 transition-all"
-                        onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                        type="email" placeholder="Correo Electrónico" 
+                        className="p-5 rounded-2xl bg-pink-50/50 border-2 border-transparent outline-none focus:border-pink-500 focus:bg-white transition-all font-bold"
+                        onChange={(e) => setFormData({...formData, email: e.target.value})}
                         required
                     />
-                )}
-                <input 
-                    type="email" placeholder="Email" 
-                    className="p-3 rounded-xl border-2 border-pink-50 outline-none focus:border-pink-500 transition-all"
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    required
-                />
-                <input 
-                    type="password" placeholder="Contraseña" 
-                    className="p-3 rounded-xl border-2 border-pink-50 outline-none focus:border-pink-500 transition-all"
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    required
-                />
-                <button className="bg-pink-600 text-white p-3 rounded-xl font-black uppercase hover:bg-pink-700 transition-all shadow-lg mt-2">
-                    {isLogin ? 'Entrar' : 'Registrarme'}
-                </button>
-            </form>
+                    <input 
+                        type="password" placeholder="Tu Contraseña" 
+                        className="p-5 rounded-2xl bg-pink-50/50 border-2 border-transparent outline-none focus:border-pink-500 focus:bg-white transition-all font-bold"
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        required
+                    />
+                    <button className="bg-pink-600 text-white p-5 rounded-2xl font-black uppercase tracking-widest hover:bg-pink-700 transition-all shadow-xl shadow-pink-100 mt-4 active:scale-95">
+                        {isLogin ? 'Ingresar Ahora' : 'Crear mi Cuenta'}
+                    </button>
+                </form>
 
-            <button 
-                onClick={() => setIsLogin(!isLogin)} 
-                className="w-full text-center mt-6 text-pink-500 font-bold hover:underline"
-            >
-                {isLogin ? '¿No tienes cuenta? Regístrate aquí' : '¿Ya tienes cuenta? Inicia sesión'}
-            </button>
+                <button 
+                    onClick={() => setIsLogin(!isLogin)} 
+                    className="w-full text-center mt-8 text-pink-400 font-black uppercase text-[10px] tracking-widest hover:text-pink-600 transition-colors"
+                >
+                    {isLogin ? '¿No tienes cuenta? Registrate gratis' : '¿Ya eres cliente? Inicia sesión'}
+                </button>
+            </div>
         </div>
     );
 };

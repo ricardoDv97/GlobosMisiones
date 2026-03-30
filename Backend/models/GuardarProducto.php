@@ -9,54 +9,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-$servidor = "localhost";
-$usuario  = "root";
-$password = ""; 
-$base_datos = "globosmisiones"; 
+require_once __DIR__ . '/../config/Database.php';
 
-$conn = new mysqli($servidor, $usuario, $password, $base_datos);
+$database = new Database();
+$db = $database->getConnection();
 
-if ($conn->connect_error) {
-    echo json_encode(["success" => false, "message" => "Error de conexión: " . $conn->connect_error]);
+if (!$db) {
+    echo json_encode(["success" => false, "message" => "Error de conexión a la base de datos."]);
     exit;
 }
 
-$json = file_get_contents('php://input');
-$data = json_decode($json, true);
+$data = json_decode(file_get_contents('php://input'), true);
 
 if (!$data) {
     echo json_encode(["success" => false, "message" => "Datos inválidos."]);
     exit;
 }
 
-// Mapeo según tus columnas exactas
-$titulo      = $data['titulo'];
-$descripcion = $data['descripcion'] ?? '';
-$precio      = (float)$data['precio'];
-$stock       = (int)$data['stock'];
-$imagen_url  = $data['imagen_url'] ?? '';
-// Si no viene categoría, le asigna la 1 por defecto para evitar errores de base de datos
-$categoria_id = (!empty($data['categoria_id'])) ? (int)$data['categoria_id'] : 1;
+try {
+    $titulo      = $data['titulo'];
+    $descripcion = $data['descripcion'] ?? '';
+    $precio      = (float)$data['precio'];
+    $stock       = (int)$data['stock'];
+    $imagen_url  = $data['imagen_url'] ?? '';
+    $categoria_id = (!empty($data['categoria_id'])) ? (int)$data['categoria_id'] : 1;
 
-// La consulta con las 7 columnas (id es autoincremental, no se pone)
-$sql = "INSERT INTO items (titulo, descripcion, precio, stock, imagen_url, categoria_id) VALUES (?, ?, ?, ?, ?, ?)";
-$stmt = $conn->prepare($sql);
+    $sql = "INSERT INTO items (titulo, descripcion, precio, stock, imagen_url, categoria_id) 
+            VALUES (:titulo, :descripcion, :precio, :stock, :imagen_url, :categoria_id)";
+    
+    $stmt = $db->prepare($sql);
+    
+    $stmt->bindParam(':titulo', $titulo);
+    $stmt->bindParam(':descripcion', $descripcion);
+    $stmt->bindParam(':precio', $precio);
+    $stmt->bindParam(':stock', $stock);
+    $stmt->bindParam(':imagen_url', $imagen_url);
+    $stmt->bindParam(':categoria_id', $categoria_id);
 
-// "ssdisi" -> string, string, double (precio), integer (stock), string (url), integer (categoria)
-$stmt->bind_param("ssdisi", $titulo, $descripcion, $precio, $stock, $imagen_url, $categoria_id);
-
-if ($stmt->execute()) {
-    echo json_encode([
-        "success" => true, 
-        "message" => "¡Producto guardado correctamente! 🎈",
-        "id" => $conn->insert_id
-    ]);
-} else {
-    echo json_encode([
-        "success" => false, 
-        "message" => "Error al insertar: " . $stmt->error
-    ]);
+    if ($stmt->execute()) {
+        echo json_encode([
+            "success" => true, 
+            "message" => "¡Producto guardado correctamente! 🎈",
+            "id" => $db->lastInsertId()
+        ]);
+    } else {
+        echo json_encode(["success" => false, "message" => "No se pudo guardar el producto."]);
+    }
+} catch (PDOException $e) {
+    echo json_encode(["success" => false, "message" => "Error: " . $e->getMessage()]);
 }
-
-$stmt->close();
-$conn->close();

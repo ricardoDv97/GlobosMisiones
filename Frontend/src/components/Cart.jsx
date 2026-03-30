@@ -7,30 +7,18 @@ const Cart = ({ carrito, setCarrito, isOpen, setIsOpen, user }) => {
     const [mostrarFormEnvio, setMostrarFormEnvio] = useState(false);
     const [cargandoPedido, setCargandoPedido] = useState(false);
 
-    // Estados para la API de Georef (Gobierno)
     const [provincias, setProvincias] = useState([]);
     const [localidades, setLocalidades] = useState([]);
     const [cargandoGeo, setCargandoGeo] = useState(false);
 
     const [datosEnvio, setDatosEnvio] = useState({
-        nombre: user?.nombre || '',
-        apellido: '',
-        telefono: '',
-        provinciaId: '', 
-        provinciaNombre: '', 
-        localidad: '',
-        direccion: '',
-        observaciones: ''
+        nombre: user?.nombre || '', apellido: '', telefono: '', provinciaId: '', provinciaNombre: '', localidad: '', direccion: '', observaciones: ''
     });
 
     useEffect(() => {
         fetch("https://apis.datos.gob.ar/georef/api/provincias?campos=id,nombre")
             .then(res => res.json())
-            .then(data => {
-                const lista = data.provincias.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                setProvincias(lista);
-            })
-            .catch(err => console.error("Error provincias:", err));
+            .then(data => setProvincias(data.provincias.sort((a, b) => a.nombre.localeCompare(b.nombre))));
     }, []);
 
     useEffect(() => {
@@ -39,12 +27,7 @@ const Cart = ({ carrito, setCarrito, isOpen, setIsOpen, user }) => {
             fetch(`https://apis.datos.gob.ar/georef/api/municipios?provincia=${datosEnvio.provinciaId}&campos=nombre&max=500`)
                 .then(res => res.json())
                 .then(data => {
-                    const lista = data.municipios.sort((a, b) => a.nombre.localeCompare(b.nombre));
-                    setLocalidades(lista);
-                    setCargandoGeo(false);
-                })
-                .catch(err => {
-                    console.error("Error localidades:", err);
+                    setLocalidades(data.municipios.sort((a, b) => a.nombre.localeCompare(b.nombre)));
                     setCargandoGeo(false);
                 });
         }
@@ -55,170 +38,132 @@ const Cart = ({ carrito, setCarrito, isOpen, setIsOpen, user }) => {
         if (name === "provinciaId") {
             const nombreProv = provincias.find(p => p.id === value)?.nombre || "";
             setDatosEnvio(prev => ({ ...prev, provinciaId: value, provinciaNombre: nombreProv, localidad: "" }));
-        } else {
-            setDatosEnvio(prev => ({ ...prev, [name]: value }));
-        }
+        } else { setDatosEnvio(prev => ({ ...prev, [name]: value })); }
     };
 
-    const eliminarDelCarrito = (id) => {
-        setCarrito(prev => prev.filter(item => item.id !== id));
-    };
-
-    const total = useMemo(() => {
-        return carrito.reduce((acc, item) => acc + (parseFloat(item.precio) * item.cantidad), 0);
-    }, [carrito]);
+    const eliminarDelCarrito = (id) => setCarrito(prev => prev.filter(item => item.id !== id));
+    const total = useMemo(() => carrito.reduce((acc, item) => acc + (parseFloat(item.precio) * item.cantidad), 0), [carrito]);
 
     const finalizarCompra = async () => {
         setCargandoPedido(true);
         const pedidoFinal = {
-            items: carrito,
-            usuario_id: user?.id,
-            envio: {
-                ...datosEnvio,
-                tipo: ubicacionTipo,
-                localidad: ubicacionTipo === "Posadas" ? "Posadas" : datosEnvio.localidad,
-                provincia: ubicacionTipo === "Posadas" ? "Misiones" : datosEnvio.provinciaNombre
-            },
+            items: carrito, usuario_id: user?.id,
+            envio: { ...datosEnvio, tipo: ubicacionTipo, localidad: ubicacionTipo === "Posadas" ? "Posadas" : datosEnvio.localidad, provincia: ubicacionTipo === "Posadas" ? "Misiones" : datosEnvio.provinciaNombre },
             total: total
         };
 
         try {
             const response = await fetch('http://localhost/GlobosMisiones/Backend/models/MercadoPagoController.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(pedidoFinal)
             });
             const data = await response.json();
 
             if (ubicacionTipo === "Posadas") {
-                const mensaje = `🎈 *Nuevo Pedido - Globos Misiones*\n\n` +
-                    `*CLIENTE:* ${datosEnvio.nombre} ${datosEnvio.apellido}\n` +
-                    `*DIRECCIÓN:* ${datosEnvio.direccion}, Posadas\n` +
-                    `*PRODUCTOS:*\n` +
-                    carrito.map(i => `- ${i.titulo} (x${i.cantidad})`).join('\n') +
-                    `\n*TOTAL:* $${total.toLocaleString('es-AR')}`;
-                
+                const mensaje = `🎈 *Nuevo Pedido - Globos Misiones*\n\n*CLIENTE:* ${datosEnvio.nombre}\n*DIRECCIÓN:* ${datosEnvio.direccion}, Posadas\n*PRODUCTOS:*\n` + carrito.map(i => `- ${i.titulo} (x${i.cantidad})`).join('\n') + `\n*TOTAL:* $${total.toLocaleString('es-AR')}`;
                 window.open(`https://wa.me/543764900821?text=${encodeURIComponent(mensaje)}`, '_blank');
-                setIsOpen(false);
-                navigate('/pago-exitoso');
-            } else if (data.init_point) {
-                window.location.href = data.init_point;
-            }
-        } catch (error) {
-            alert("Error al procesar el pago.");
-        } finally {
-            setCargandoPedido(false);
-        }
+                setIsOpen(false); navigate('/pago-exitoso');
+            } else if (data.init_point) { window.location.href = data.init_point; }
+        } catch (error) { alert("Error al procesar el pago."); }
+        finally { setCargandoPedido(false); }
     };
 
     if (!isOpen) return null;
-
     const formularioValido = datosEnvio.nombre && datosEnvio.telefono && datosEnvio.direccion && (ubicacionTipo === 'Posadas' || datosEnvio.localidad);
 
     return (
-        <div className="fixed inset-0 z-50 flex justify-end">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
-            
-            <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-fade-left">
-                {/* Header */}
-                <div className="p-6 bg-pink-600 text-white flex justify-between items-center shadow-lg shrink-0">
-                    <div>
-                        <h2 className="text-xl font-black uppercase italic tracking-tighter">Mi Carrito</h2>
-                        <p className="text-[9px] font-bold opacity-80 uppercase tracking-widest text-pink-100">Globos Misiones</p>
-                    </div>
-                    <button onClick={() => setIsOpen(false)} className="bg-white/20 w-10 h-10 rounded-full hover:bg-white/40 transition-all flex items-center justify-center">✕</button>
+        <div className="fixed inset-0 z-[100] flex justify-end">
+            <div className="absolute inset-0 bg-pink-900/40 backdrop-blur-md transition-opacity" onClick={() => setIsOpen(false)}></div>
+            <div className="relative w-full max-w-md bg-white h-full shadow-2xl flex flex-col animate-slide-in-right overflow-hidden rounded-l-[3rem]">
+                
+                <div className="p-8 bg-pink-600 text-white shrink-0 relative">
+                    <button onClick={() => setIsOpen(false)} className="absolute top-8 right-8 bg-white/20 hover:bg-white text-white hover:text-pink-600 w-10 h-10 rounded-full transition-all flex items-center justify-center font-bold">✕</button>
+                    <h2 className="text-3xl font-black uppercase italic tracking-tighter">Mi Pedido</h2>
+                    <p className="text-[10px] font-black uppercase tracking-[0.4em] opacity-80 mt-1">Bolsa de Compras</p>
                 </div>
 
-                {/* Contenido Scrollable */}
-                <div className="flex-grow overflow-y-auto p-5 space-y-4">
+                <div className="flex-grow overflow-y-auto p-6 space-y-6 bg-gray-50/50">
                     {!mostrarFormEnvio ? (
                         <>
                             {carrito.length === 0 ? (
-                                <p className="text-center text-gray-400 py-10 font-bold uppercase text-[10px]">Tu carrito está vacío 🎈</p>
+                                <div className="text-center py-20 animate-bounce">
+                                    <span className="text-6xl block mb-4">🎈</span>
+                                    <p className="font-black text-gray-400 uppercase text-xs tracking-widest">¿Aún no elegiste tus globos?</p>
+                                </div>
                             ) : (
-                                carrito.map(item => (
-                                    <div key={item.id} className="flex gap-4 p-4 bg-gray-50 rounded-[1.5rem] border border-gray-100 items-center animate-fade-in">
-                                        <img src={item.imagen_url} className="w-16 h-16 object-cover rounded-xl shadow-sm" alt="" />
-                                        <div className="flex-grow">
-                                            <p className="font-black text-[11px] uppercase text-gray-700 leading-tight">{item.titulo}</p>
-                                            <p className="text-pink-600 font-black text-sm">${parseFloat(item.precio).toLocaleString('es-AR')}</p>
-                                            <p className="text-[9px] text-gray-400 font-bold uppercase">Cant: {item.cantidad}</p>
+                                <div className="space-y-4">
+                                    {carrito.map(item => (
+                                        <div key={item.id} className="flex gap-4 p-4 bg-white rounded-[2rem] border-2 border-pink-50 items-center shadow-sm">
+                                            <img src={item.imagen_url} className="w-20 h-20 object-cover rounded-2xl shadow-inner" alt="" />
+                                            <div className="flex-grow">
+                                                <p className="font-black text-[12px] uppercase text-gray-700 leading-none mb-1">{item.titulo}</p>
+                                                <p className="text-pink-600 font-black text-lg tracking-tighter">${parseFloat(item.precio).toLocaleString('es-AR')}</p>
+                                                <div className="flex items-center gap-2 mt-2">
+                                                    <span className="bg-pink-50 text-pink-500 text-[10px] font-black px-3 py-1 rounded-full uppercase">Cant: {item.cantidad}</span>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => eliminarDelCarrito(item.id)} className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-full transition-all">✕</button>
                                         </div>
-                                        <button onClick={() => eliminarDelCarrito(item.id)} className="p-2 text-red-300 hover:text-red-500 transition-colors">🗑️</button>
+                                    ))}
+                                    <div className="grid grid-cols-2 gap-4 pt-6">
+                                        <button onClick={() => { setUbicacionTipo("Posadas"); setMostrarFormEnvio(true); }} className="p-6 bg-white border-4 border-pink-50 rounded-[2.5rem] hover:border-pink-500 hover:scale-105 transition-all flex flex-col items-center shadow-md">
+                                            <span className="text-4xl mb-2">🛵</span>
+                                            <span className="font-black text-[10px] uppercase tracking-widest text-gray-600">Posadas (WA)</span>
+                                        </button>
+                                        <button onClick={() => { setUbicacionTipo("Interior"); setMostrarFormEnvio(true); }} className="p-6 bg-white border-4 border-pink-50 rounded-[2.5rem] hover:border-pink-500 hover:scale-105 transition-all flex flex-col items-center shadow-md">
+                                            <span className="text-4xl mb-2">🚚</span>
+                                            <span className="font-black text-[10px] uppercase tracking-widest text-gray-600">Interior (MP)</span>
+                                        </button>
                                     </div>
-                                ))
-                            )}
-                            
-                            {carrito.length > 0 && (
-                                <div className="grid grid-cols-2 gap-3 pt-4">
-                                    <button onClick={() => { setUbicacionTipo("Posadas"); setMostrarFormEnvio(true); }} className="p-5 border-2 border-gray-100 rounded-[2rem] hover:border-pink-500 hover:bg-pink-50 transition-all flex flex-col items-center group">
-                                        <span className="text-3xl group-hover:scale-110 transition-transform">🛵</span>
-                                        <span className="font-black text-[9px] uppercase mt-2 text-gray-500">Posadas</span>
-                                    </button>
-                                    <button onClick={() => { setUbicacionTipo("Interior"); setMostrarFormEnvio(true); }} className="p-5 border-2 border-gray-100 rounded-[2rem] hover:border-pink-500 hover:bg-pink-50 transition-all flex flex-col items-center group">
-                                        <span className="text-3xl group-hover:scale-110 transition-transform">🚚</span>
-                                        <span className="font-black text-[9px] uppercase mt-2 text-gray-500">Interior</span>
-                                    </button>
                                 </div>
                             )}
                         </>
                     ) : (
-                        <div className="space-y-4 animate-fade-up">
-                            <button onClick={() => setMostrarFormEnvio(false)} className="text-pink-600 font-black text-[10px] uppercase underline mb-2">← Editar pedido</button>
-                            <div className="grid grid-cols-2 gap-2">
-                                <input name="nombre" value={datosEnvio.nombre} onChange={handleInputChange} placeholder="Nombre" className="w-full p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none focus:ring-2 ring-pink-100" />
-                                <input name="apellido" placeholder="Apellido" onChange={handleInputChange} className="w-full p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none focus:ring-2 ring-pink-100" />
+                        <div className="space-y-4 animate-fade-in pb-10">
+                            <button onClick={() => setMostrarFormEnvio(false)} className="bg-pink-100 text-pink-600 font-black text-[10px] uppercase px-4 py-2 rounded-full mb-4">← Volver al carrito</button>
+                            <h3 className="font-black text-gray-700 uppercase italic text-lg mb-4">Datos de Envío</h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <input name="nombre" value={datosEnvio.nombre} onChange={handleInputChange} placeholder="Nombre" className="w-full p-5 bg-white rounded-2xl text-xs font-bold border-2 border-pink-50 outline-none focus:border-pink-400 shadow-sm" />
+                                <input name="apellido" placeholder="Apellido" onChange={handleInputChange} className="w-full p-5 bg-white rounded-2xl text-xs font-bold border-2 border-pink-50 outline-none focus:border-pink-400 shadow-sm" />
                             </div>
-                            <input name="telefono" placeholder="WhatsApp" onChange={handleInputChange} className="w-full p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none focus:ring-2 ring-pink-100" />
-                            
+                            <input name="telefono" placeholder="WhatsApp (Ej: 3764...)" onChange={handleInputChange} className="w-full p-5 bg-white rounded-2xl text-xs font-bold border-2 border-pink-50 outline-none focus:border-pink-400 shadow-sm" />
                             {ubicacionTipo === "Interior" && (
-                                <div className="space-y-2">
-                                    <select name="provinciaId" value={datosEnvio.provinciaId} onChange={handleInputChange} className="w-full p-4 bg-gray-100 rounded-2xl text-xs font-black uppercase outline-none">
+                                <div className="space-y-3">
+                                    <select name="provinciaId" value={datosEnvio.provinciaId} onChange={handleInputChange} className="w-full p-5 bg-white rounded-2xl text-[10px] font-black uppercase border-2 border-pink-50 outline-none shadow-sm">
                                         <option value="">Provincia</option>
                                         {provincias.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                                     </select>
-                                    <select name="localidad" value={datosEnvio.localidad} onChange={handleInputChange} disabled={!datosEnvio.provinciaId || cargandoGeo} className="w-full p-4 bg-gray-100 rounded-2xl text-xs font-black uppercase outline-none disabled:opacity-50">
-                                        <option value="">{cargandoGeo ? "Cargando..." : "Localidad"}</option>
+                                    <select name="localidad" value={datosEnvio.localidad} onChange={handleInputChange} disabled={!datosEnvio.provinciaId || cargandoGeo} className="w-full p-5 bg-white rounded-2xl text-[10px] font-black uppercase border-2 border-pink-50 outline-none shadow-sm disabled:opacity-50">
+                                        <option value="">{cargandoGeo ? "Cargando ciudades..." : "Seleccionar Localidad"}</option>
                                         {localidades.map((l, i) => <option key={i} value={l.nombre}>{l.nombre}</option>)}
                                     </select>
                                 </div>
                             )}
-                            <input name="direccion" placeholder="Calle y Nro" onChange={handleInputChange} className="w-full p-4 bg-gray-50 rounded-2xl text-xs font-bold outline-none focus:ring-2 ring-pink-100" />
-                            <textarea name="observaciones" placeholder="Notas..." onChange={handleInputChange} className="w-full p-4 bg-gray-50 rounded-2xl text-xs font-bold h-20 resize-none outline-none" />
+                            <input name="direccion" placeholder="Calle, Número y Referencias" onChange={handleInputChange} className="w-full p-5 bg-white rounded-2xl text-xs font-bold border-2 border-pink-50 outline-none focus:border-pink-400 shadow-sm" />
+                            <textarea name="observaciones" placeholder="¿Alguna nota especial?" onChange={handleInputChange} className="w-full p-5 bg-white rounded-2xl text-xs font-bold border-2 border-pink-50 h-24 resize-none outline-none focus:border-pink-400 shadow-sm" />
                         </div>
                     )}
                 </div>
 
-                {/* Footer Fijo y Prolijo */}
-                <div className="p-6 border-t bg-white rounded-t-[2.5rem] shadow-[0_-15px_30px_rgba(0,0,0,0.05)] shrink-0">
-                    <div className="flex justify-between items-center mb-5 px-4">
-                        <span className="font-black text-gray-300 uppercase text-[9px] tracking-widest">Total</span>
-                        <span className="text-3xl font-black italic tracking-tighter text-gray-800">${total.toLocaleString('es-AR')}</span>
+                <div className="p-8 bg-white border-t border-pink-50 rounded-t-[3.5rem] shadow-[0_-20px_40px_rgba(0,0,0,0.03)] shrink-0">
+                    <div className="flex justify-between items-end mb-6">
+                        <div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Total a pagar</p>
+                            <p className="text-4xl font-black italic tracking-tighter text-gray-800">${total.toLocaleString('es-AR')}</p>
+                        </div>
+                        <span className="text-3xl">🎈</span>
                     </div>
 
                     {mostrarFormEnvio && (
-                        <div className="max-w-[280px] mx-auto space-y-3">
-                            {ubicacionTipo === "Posadas" ? (
-                                <button 
-                                    onClick={finalizarCompra}
-                                    disabled={!formularioValido || cargandoPedido}
-                                    className="w-full bg-[#25D366] py-4 rounded-2xl font-black uppercase text-[11px] text-white shadow-lg shadow-green-100 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
-                                >
-                                    WhatsApp 📱
-                                </button>
-                            ) : (
-                                <button 
-                                    onClick={finalizarCompra}
-                                    disabled={!formularioValido || cargandoPedido}
-                                    className="w-full bg-[#009EE3] py-4 rounded-2xl font-black uppercase text-[11px] text-white shadow-lg shadow-blue-100 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
-                                >
-                                    <img src="https://imgmp.mlstatic.com/resources/mp-logo.png" alt="" className="h-4 w-auto brightness-200" />
-                                    <span>Pagar</span>
-                                </button>
-                            )}
-                            <p className="text-[7px] text-center text-gray-400 font-bold uppercase tracking-widest leading-tight">
-                                Al confirmar, procesaremos tu pedido <br/> de Globos Misiones
-                            </p>
+                        <div className="space-y-4">
+                            <button 
+                                onClick={finalizarCompra}
+                                disabled={!formularioValido || cargandoPedido}
+                                className={`w-full py-5 rounded-[2rem] font-black uppercase tracking-widest text-[11px] text-white shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50 ${ubicacionTipo === "Posadas" ? 'bg-green-500 shadow-green-100 hover:bg-green-600' : 'bg-[#009EE3] shadow-blue-100 hover:bg-blue-600'}`}
+                            >
+                                {ubicacionTipo === "Posadas" ? 'Finalizar por WhatsApp 📱' : 'Pagar con Mercado Pago'}
+                            </button>
+                            <p className="text-[8px] text-center text-gray-400 font-black uppercase tracking-[0.2em]">Seguridad 100% garantizada</p>
                         </div>
                     )}
                 </div>

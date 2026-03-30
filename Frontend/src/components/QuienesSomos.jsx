@@ -2,33 +2,36 @@ import React from 'react';
 
 const QuienesSomos = () => {
     return (
-        <section className="py-16 bg-gradient-to-b from-white to-pink-50">
-            <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <section className="py-20 bg-white">
+            <div className="max-w-6xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
                 
-                {/* Imagen decorativa */}
+                {/* Imagen con el estilo del proyecto */}
                 <div className="relative">
-                    <div className="absolute -top-4 -left-4 w-full h-full border-4 border-pink-200 rounded-3xl"></div>
+                    <div className="absolute -bottom-6 -right-6 w-full h-full bg-globo-pink/10 rounded-[50px] -z-10"></div>
                     <img 
                         src="/quienesSomos.jpeg" 
                         alt="Nuestro taller" 
-                        className="relative z-10 rounded-3xl shadow-xl object-cover h-96 w-full"
+                        className="rounded-[50px] shadow-2xl object-cover h-[500px] w-full border-8 border-white"
                     />
                 </div>
 
-                {/* Texto */}
-                <div className="space-y-6">
-                    <h2 className="text-4xl font-black text-pink-600 uppercase italic tracking-tighter">
-                        ¿Quiénes Somos?
+                {/* Texto basado fielmente en tu archivo */}
+                <div className="space-y-8">
+                    <h2 className="text-5xl font-black text-slate-800 uppercase italic tracking-tighter">
+                        ¿Quiénes <span className="text-globo-pink">Somos?</span>
                     </h2>
-                    <p className="text-gray-600 leading-relaxed text-lg">
-                        <span className="font-bold text-pink-500">Globos Misiones</span>, tienda virtual dedicada a la venta por menor y por mayor de globos, artículos para decoración y también realizamos trabajos personalizados y decoraciones con globos.
+                    
+                    <p className="text-gray-600 leading-relaxed text-xl font-medium">
+                        <span className="font-black text-globo-pink">Globos Misiones</span>, tienda virtual dedicada a la venta por menor y por mayor de globos, artículos para decoración y también realizamos trabajos personalizados y decoraciones con globos.
                     </p>
-                    <div className="bg-white p-6 rounded-2xl shadow-sm border-l-8 border-pink-400">
-                        <p className="italic text-gray-500 text-md">
-                            "𝖳𝖾𝗇𝖾𝗆𝗈𝗌 𝗆𝖺𝗌 𝖽𝖾 6 𝖺ñ𝗈𝗌 𝖽𝖾 𝖾𝗑𝗉𝖾𝗋𝗂𝖾𝗇𝖼𝗂𝖺 𝖼𝗈𝗆𝖾𝗋𝖼𝗂𝖺𝗅𝗂𝗓𝖺𝗇𝖽𝗈 𝗅𝗈𝗌 𝗉𝗋𝗈𝖽𝗎𝖼𝗍𝗈𝗌 𝗆á𝗌 𝗂𝗇𝗇𝗈𝗏𝖺𝖽𝗈𝗋𝖾𝗌, 𝗉𝖺𝗋𝖺 𝗉𝗋𝗈𝗏𝖾𝖾𝗋 𝖺 𝗅𝗈𝗌 𝖼𝗅𝗂𝖾𝗇𝗍𝖾𝗌 𝗆á𝗌 𝖽𝖾𝗌𝗍𝖺𝖼𝖺𝖽𝗈𝗌 𝗒 𝗋𝖾𝗅𝖾𝗏𝖺𝗇𝗍𝖾𝗌 𝖽𝖾𝗅 𝗉𝖺í𝗌."
+
+                    <div className="bg-gray-50 p-8 rounded-[40px] border-l-[12px] border-globo-pink shadow-sm">
+                        <p className="italic text-slate-700 text-lg font-bold leading-snug">
+                            "Tenemos mas de 6 años de experiencia comercializando los productos más innovadores, para proveer a los clientes más destacados y relevantes del país."
                         </p>
                     </div>
-                    <p className="text-gray-600">
+
+                    <p className="text-gray-500 font-bold italic text-lg">
                         Especialistas en arcos orgánicos, bouquets personalizados y sets de cumpleaños que marcan tendencia en toda la provincia.
                     </p>
                 </div>

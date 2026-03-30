@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { ShoppingCart, User, Search, ChevronDown } from 'lucide-react';
 import Tienda from './components/Tienda';
 import AdminPanel from './components/AdminPanel'; 
 import ProductoDetalle from './components/ProductoDetalle';
@@ -7,30 +8,28 @@ import Auth from './components/Auth';
 import Cart from './components/Cart';
 import SuccessPage from './components/SuccessPage';
 import FailurePage from './components/FailurePage';
+import Footer from './components/Footer';
+import QuienesSomos from './components/QuienesSomos';
+import SeccionInformativa from './components/SeccionInformativa';
+import MainCarousel from './components/MainCarousel';
 
-const WhatsAppButton = () => (
-    <a 
-        href="https://wa.me/543764900821" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 hover:scale-110 transition-all z-50 flex items-center justify-center"
-        title="Consultanos por WhatsApp"
-    >
-        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="currentColor" viewBox="0 0 16 16">
-            <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/>
-        </svg>
-    </a>
-);
+// Componente auxiliar para que la página siempre suba al inicio al cambiar de ruta
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
 
 function App() {
     const [productos, setProductos] = useState([]);
     const [categorias, setCategorias] = useState([]);
     const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')) || null);
-    // Inicializamos el carrito desde localStorage si existe
     const [carrito, setCarrito] = useState(JSON.parse(localStorage.getItem('cart')) || []);
     const [cartOpen, setCartOpen] = useState(false);
+    const [menuCategoriasOpen, setMenuCategoriasOpen] = useState(false);
 
-    // Guardar en localStorage cada vez que el carrito cambie
     useEffect(() => {
         localStorage.setItem('cart', JSON.stringify(carrito));
     }, [carrito]);
@@ -75,90 +74,108 @@ function App() {
 
     return (
         <Router>
-            <div className="min-h-screen bg-pink-50 flex flex-col relative">
-                <header className="bg-pink-600 p-6 text-white shadow-lg relative">
-                    <div className="max-w-7xl mx-auto flex items-center justify-center gap-4">
-                        <Link to="/" className="flex items-center gap-4 group">
-                            <img src="/logo.png" alt="Logo" className="h-20 w-auto transition-transform group-hover:scale-105" />
-                            <div className="flex flex-col">
-                                <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter">GLOBOS MISIONES</h1>
-                                <p className="font-bold text-pink-100 uppercase tracking-widest text-[10px]">Tienda Oficial - Posadas, Misiones</p>
+            <ScrollToTop />
+            <div className="min-h-screen bg-globo-light flex flex-col font-sans">
+                <header className="bg-white sticky top-0 z-50 border-b border-gray-100 py-4 shadow-sm">
+                    <div className="max-w-7xl mx-auto px-6 flex items-center justify-between gap-4">
+                        
+                        <Link to="/" className="flex items-center gap-2 group">
+                            <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+                            <div className="flex flex-col leading-tight">
+                                <h1 className="text-xl font-extrabold text-slate-800 tracking-tighter leading-none">Globos<br/>Misiones</h1>
                             </div>
                         </Link>
-                    </div>
 
-                    <div className="absolute top-4 right-4 flex gap-3 items-center">
-                        <button 
-                            onClick={() => setCartOpen(true)}
-                            className="relative bg-white text-pink-600 p-2 rounded-full shadow-md hover:scale-110 transition-transform text-xl"
-                        >
-                            🛒
-                            {carrito.length > 0 && (
-                                <span className="absolute -top-2 -right-2 bg-pink-800 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-bounce">
-                                    {carrito.reduce((acc, item) => acc + item.cantidad, 0)}
-                                </span>
-                            )}
-                        </button>
-
-                        {user ? (
-                            <div className="flex flex-col items-end">
-                                <span className="bg-white text-pink-600 px-3 py-1 rounded-full text-[10px] font-black italic shadow-sm">
-                                    HOLA, {user.nombre.toUpperCase()}
-                                </span>
-                                <div className="flex gap-2 mt-1">
-                                    {user.rol === 'admin' && (
-                                        <Link to="/admin" className="text-[9px] bg-yellow-400 px-2 py-1 rounded-lg text-black font-black uppercase shadow-sm">Admin</Link>
-                                    )}
-                                    <button onClick={handleLogout} className="text-[9px] bg-red-500 hover:bg-red-600 px-2 py-1 rounded-lg font-bold uppercase transition-colors">Salir</button>
-                                </div>
+                        <nav className="hidden lg:flex gap-8 text-[12px] font-bold text-gray-400 uppercase tracking-widest items-center">
+                            <Link to="/" className="hover:text-globo-blue transition">Inicio</Link>
+                            
+                            <div className="relative">
+                                <button 
+                                    onMouseEnter={() => setMenuCategoriasOpen(true)}
+                                    className="flex items-center gap-1 hover:text-globo-blue transition uppercase"
+                                >
+                                    Categorías <ChevronDown size={14} />
+                                </button>
+                                {menuCategoriasOpen && (
+                                    <div 
+                                        className="absolute top-full left-0 bg-white shadow-xl rounded-2xl p-4 w-56 border border-gray-100"
+                                        onMouseLeave={() => setMenuCategoriasOpen(false)}
+                                    >
+                                        {categorias.map(cat => (
+                                            <Link 
+                                                key={cat.id} 
+                                                to={`/?categoria=${cat.id}`}
+                                                className="block py-2 px-4 hover:bg-globo-light rounded-xl text-slate-700 normal-case font-bold transition"
+                                                onClick={() => setMenuCategoriasOpen(false)}
+                                            >
+                                                {cat.nombre}
+                                            </Link>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                        ) : (
-                            <Link to="/login" className="text-[10px] bg-pink-700 px-4 py-2 rounded-full border border-pink-400 font-bold uppercase hover:bg-pink-800 transition-all">Iniciar Sesión</Link>
-                        )}
+
+                            <Link to="/talleres" className="hover:text-globo-blue transition">talleres</Link>
+                            <Link to="/ofertas" className="hover:text-globo-blue transition">Ofertas</Link>
+                            <Link to="/regalos" className="hover:text-globo-blue transition">Regalos</Link>
+                            <Link to="/quienes-somos" className="hover:text-globo-blue transition">Nosotros</Link>
+                        </nav>
+
+                        <div className="hidden md:flex flex-grow max-w-sm relative mx-4">
+                            <input 
+                                type="text" 
+                                placeholder="Buscar globos..." 
+                                className="w-full bg-gray-100 rounded-full py-2 px-6 text-sm focus:outline-none focus:ring-2 focus:ring-globo-blue/20 transition-all"
+                            />
+                            <div className="absolute right-2 top-1.5 bg-globo-blue p-1.5 rounded-full text-white cursor-pointer">
+                                <Search size={16} strokeWidth={3} />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-6 text-gray-500">
+                            <Link to={user ? (user.rol === 'admin' ? '/admin' : '#') : '/login'} className="hover:text-globo-blue transition">
+                                <User size={22} />
+                            </Link>
+                            <button onClick={() => setCartOpen(true)} className="relative flex items-center gap-2 hover:text-globo-blue transition">
+                                <ShoppingCart size={22} />
+                                {carrito.length > 0 && (
+                                    <span className="absolute -top-2 -left-2 bg-globo-blue text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                                        {carrito.reduce((acc, item) => acc + item.cantidad, 0)}
+                                    </span>
+                                )}
+                            </button>
+                            {user && (
+                                <button onClick={handleLogout} className="text-[10px] bg-red-50 text-red-500 px-3 py-1 rounded-full font-bold uppercase">Salir</button>
+                            )}
+                        </div>
                     </div>
                 </header>
 
-                <div className="flex-grow">
+                <main className="flex-grow">
                     <Routes>
-                        <Route path="/" element={<Tienda productos={productos} categorias={categorias} agregarAlCarrito={agregarAlCarrito} />} />
+                        <Route path="/" element={
+                            <>
+                                <MainCarousel /> 
+                                <Tienda productos={productos} categorias={categorias} agregarAlCarrito={agregarAlCarrito} />
+                            </>
+                        } />
+                        
                         <Route path="/admin" element={<AdminPanel onProductAdded={fetchProductos} />} />
                         <Route path="/producto/:id" element={<ProductoDetalle productos={productos} agregarAlCarrito={agregarAlCarrito} />} />
                         <Route path="/login" element={<Auth setUser={setUser} />} />
                         <Route path="/pago-exitoso" element={<SuccessPage setCarrito={setCarrito} />} />
                         <Route path="/pago-fallido" element={<FailurePage />} />
+                        <Route path="/quienes-somos" element={<QuienesSomos />} />
+
+                        {/* EL TRUCO: Usamos 'key' para forzar a React a limpiar el componente al cambiar de ruta */}
+                        <Route path="/talleres" element={<SeccionInformativa key="talleres" titulo="Nuestros" subrayado="Talleres" texto="Realizamos talleres presenciales para que aprendas el arte de la decoración con globos. Próximamente más fechas." />} />
+                        <Route path="/ofertas" element={<SeccionInformativa key="ofertas" titulo="Super" subrayado="Ofertas" texto="Aprovecha nuestros combos con descuentos exclusivos por tiempo limitado." />} />
+                        <Route path="/regalos" element={<SeccionInformativa key="regalos" titulo="Sets de" subrayado="Regalos" texto="Sorprendé a esa persona especial con nuestros bouquets de regalo personalizados." />} />
                     </Routes>
-                </div>
+                </main>
 
-                <footer className="bg-gray-900 text-white p-12 mt-10">
-                    <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-10 text-center md:text-left">
-                        <div>
-                            <h4 className="text-pink-500 font-black mb-4 uppercase italic tracking-wider">Globos Misiones</h4>
-                            <p className="text-gray-400 text-sm leading-relaxed">Expertos en decoración con globos para todo tipo de eventos.</p>
-                        </div>
-                        <div>
-                            <h4 className="text-pink-500 font-black mb-4 uppercase italic tracking-wider">Contacto Directo</h4>
-                            <p className="text-gray-400 text-sm mb-1">📍 Posadas, Misiones, Argentina</p>
-                            <p className="text-gray-400 text-sm mb-1">📞 WhatsApp: +54 376-4900821</p>
-                        </div>
-                        <div>
-                            <h4 className="text-pink-500 font-black mb-4 uppercase italic tracking-wider">Horarios</h4>
-                            <p className="text-gray-400 text-sm">Lunes a Sábados: 08:30 a 12:30 y 16:30 a 20:30</p>
-                        </div>
-                    </div>
-                    <div className="border-t border-gray-800 mt-10 pt-8 text-center">
-                        <p className="text-gray-500 text-[10px] uppercase tracking-[0.2em]">© 2026 Globos Misiones</p>
-                    </div>
-                </footer>
-
-                <Cart 
-                    carrito={carrito} 
-                    setCarrito={setCarrito} 
-                    isOpen={cartOpen} 
-                    setIsOpen={setCartOpen} 
-                    user={user}
-                />
-
-                <WhatsAppButton />
+                <Footer />
+                <Cart carrito={carrito} setCarrito={setCarrito} isOpen={cartOpen} setIsOpen={setCartOpen} user={user} />
             </div>
         </Router>
     );

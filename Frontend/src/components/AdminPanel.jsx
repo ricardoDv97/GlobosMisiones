@@ -1,224 +1,166 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 
-const AdminPanel = ({ onProductAdded }) => {
-    const [tab, setTab] = useState('productos'); // 'productos' o 'ventas'
-    const [categorias, setCategorias] = useState([]);
-    const [productos, setProductos] = useState([]);
-    const [ventas, setVentas] = useState([]); // Nuevo estado para ventas
-    const [nuevaCat, setNuevaCat] = useState(''); 
-    const [formData, setFormData] = useState({
-        titulo: '', descripcion: '', precio: '', imagen_url: '', stock: 0, categoria_id: ''
+const AdminPanel = ({ productos, categorias, setProductos, setCategorias }) => {
+    const [tab, setTab] = useState('productos');
+    const [nuevoProducto, setNuevoProducto] = useState({
+        titulo: '', descripcion: '', precio: '', stock: '', categoria_id: '', imagen_url: ''
     });
-    const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+    const [nuevaCategoria, setNuevaCategoria] = useState('');
     const [cargando, setCargando] = useState(false);
 
-    // Cargar Datos
-    const fetchCategorias = () => {
-        fetch('http://localhost/GlobosMisiones/Backend/models/ObtenerCategorias.php')
-            .then(res => res.json())
-            .then(data => setCategorias(data))
-            .catch(err => console.error("Error:", err));
-    };
+    // Manejo de subida de imagen al servidor
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    const cargarProductos = async () => {
+        const formData = new FormData();
+        formData.append('image', file);
+
         try {
-            const res = await fetch('http://localhost/GlobosMisiones/Backend/models/Producto.php');
+            setCargando(true);
+            const res = await fetch('http://localhost/Backend/models/UploadImage.php', {
+                method: 'POST',
+                body: formData
+            });
             const data = await res.json();
-            setProductos(data);
-        } catch (err) { console.error("Error:", err); }
+            if (data.success) {
+                setNuevoProducto({ ...nuevoProducto, imagen_url: data.url });
+            } else {
+                alert("Error al subir imagen: " + data.message);
+            }
+        } catch (error) {
+            console.error("Error upload:", error);
+        } finally {
+            setCargando(false);
+        }
     };
 
-    const fetchVentas = async () => {
-        try {
-            // Este es el archivo PHP que definimos anteriormente
-            const res = await fetch('http://localhost/GlobosMisiones/Backend/models/ObtenerVentas.php');
-            const data = await res.json();
-            setVentas(data);
-        } catch (err) { console.error("Error cargando ventas:", err); }
-    };
-
-    useEffect(() => {
-        fetchCategorias();
-        cargarProductos();
-        fetchVentas();
-    }, []);
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleAddCategoria = async (e) => {
+    const guardarProducto = async (e) => {
         e.preventDefault();
-        if (!nuevaCat.trim()) return;
         try {
-            const response = await fetch('http://localhost/GlobosMisiones/Backend/models/GuardarCategoria.php', {
+            const res = await fetch('http://localhost/Backend/models/GuardarProducto.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre: nuevaCat })
+                body: JSON.stringify(nuevoProducto)
             });
-            const result = await response.json();
-            if (result.success) {
-                setNuevaCat('');
-                fetchCategorias(); 
-                setMensaje({ texto: 'Categoría añadida', tipo: 'success' });
+            const data = await res.json();
+            if (data.success) {
+                alert("¡Producto creado! 🎈");
+                window.location.reload(); // Recarga simple para ver cambios
             }
-        } catch (error) { setMensaje({ texto: 'Error', tipo: 'error' }); }
+        } catch (error) {
+            alert("Error al conectar con el servidor");
+        }
     };
 
-    const handleSubmit = async (e) => {
+    const guardarCategoria = async (e) => {
         e.preventDefault();
-        setMensaje({ texto: 'Procesando...', tipo: 'info' });
-        setCargando(true);
         try {
-            const response = await fetch('http://localhost/GlobosMisiones/Backend/models/GuardarProducto.php', {
+            const res = await fetch('http://localhost/Backend/models/GuardarCategoria.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ nombre: nuevaCategoria })
             });
-            const result = await response.json();
-            if (result.success) {
-                setMensaje({ texto: '¡Globo publicado! 🎈', tipo: 'success' });
-                setFormData({ titulo: '', descripcion: '', precio: '', imagen_url: '', stock: 0, categoria_id: '' });
-                cargarProductos();
-                if (onProductAdded) onProductAdded();
+            const data = await res.json();
+            if (data.success) {
+                setNuevaCategoria('');
+                alert("Categoría guardada");
+                window.location.reload();
             }
-        } catch (error) { setMensaje({ texto: 'Error de red', tipo: 'error' }); }
-        finally { setCargando(false); }
-    };
-
-    const eliminarProducto = async (id) => {
-        if (window.confirm("¿Borrar este producto?")) {
-            try {
-                const res = await fetch('http://localhost/GlobosMisiones/Backend/models/EliminarProducto.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    cargarProductos();
-                    if (onProductAdded) onProductAdded();
-                    setMensaje({ texto: 'Eliminado', tipo: 'success' });
-                }
-            } catch (error) { setMensaje({ texto: 'Error', tipo: 'error' }); }
+        } catch (error) {
+            console.error(error);
         }
     };
 
     return (
-        <div className="max-w-6xl mx-auto my-12 p-8 bg-white rounded-3xl shadow-2xl border-4 border-pink-100">
-            <h2 className="text-3xl font-black text-pink-600 text-center mb-8 uppercase italic">Panel Admin - Globos Misiones</h2>
-            
-            {/* SELECTOR DE PESTAÑAS */}
-            <div className="flex justify-center gap-4 mb-10">
-                <button 
-                    onClick={() => setTab('productos')}
-                    className={`px-6 py-2 rounded-full font-bold uppercase tracking-tighter transition-all ${tab === 'productos' ? 'bg-pink-600 text-white' : 'bg-pink-100 text-pink-600'}`}
-                >
-                    Inventario
-                </button>
-                <button 
-                    onClick={() => setTab('ventas')}
-                    className={`px-6 py-2 rounded-full font-bold uppercase tracking-tighter transition-all ${tab === 'ventas' ? 'bg-pink-600 text-white' : 'bg-pink-100 text-pink-600'}`}
-                >
-                    Pedidos Recibidos
-                </button>
-            </div>
-
-            {tab === 'productos' ? (
-                <>
-                    {/* SECCIÓN: AGREGAR CATEGORÍA */}
-                    <div className="mb-10 p-4 bg-pink-50 rounded-2xl border border-pink-200">
-                        <label className="block text-xs font-bold text-pink-400 mb-2 uppercase ml-2">Nueva Categoría</label>
-                        <div className="flex gap-2">
-                            <input type="text" value={nuevaCat} onChange={(e) => setNuevaCat(e.target.value)} placeholder="Ej: Globos de Helio" className="flex-grow p-3 rounded-xl border-2 border-transparent focus:border-pink-300 outline-none" />
-                            <button onClick={handleAddCategoria} className="bg-pink-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-pink-600 transition-all text-sm">Añadir</button>
-                        </div>
+        <div className="min-h-screen bg-pink-50/30 pb-20 pt-10 px-6">
+            <div className="max-w-5xl mx-auto">
+                <header className="flex justify-between items-center mb-10">
+                    <h1 className="text-4xl font-black text-slate-800 italic uppercase tracking-tighter">
+                        Panel <span className="text-pink-600">Admin</span>
+                    </h1>
+                    <div className="flex bg-white p-1 rounded-2xl shadow-sm border border-pink-100">
+                        <button onClick={() => setTab('productos')} className={`px-6 py-2 rounded-xl font-bold transition-all ${tab === 'productos' ? 'bg-pink-600 text-white' : 'text-slate-400'}`}>Productos</button>
+                        <button onClick={() => setTab('categorias')} className={`px-6 py-2 rounded-xl font-bold transition-all ${tab === 'categorias' ? 'bg-pink-600 text-white' : 'text-slate-400'}`}>Categorías</button>
                     </div>
+                </header>
 
-                    <hr className="mb-8 border-pink-100" />
-                    
-                    {mensaje.texto && (
-                        <div className={`mb-6 p-4 rounded-xl text-center font-bold ${mensaje.tipo === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {mensaje.texto}
-                        </div>
-                    )}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                    {/* Formulario Lateral */}
+                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="lg:col-span-1">
+                        <div className="bg-white p-8 rounded-[3rem] shadow-xl border-8 border-white">
+                            <h2 className="text-xl font-black uppercase mb-6 text-slate-700">Añadir {tab === 'productos' ? 'Producto' : 'Categoría'}</h2>
+                            
+                            {tab === 'productos' ? (
+                                <form onSubmit={guardarProducto} className="space-y-4">
+                                    <input type="text" placeholder="Título del producto" required className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-pink-400 outline-none font-medium" onChange={e => setNuevoProducto({...nuevoProducto, titulo: e.target.value})} />
+                                    
+                                    <textarea placeholder="Descripción" className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-pink-400 outline-none font-medium" onChange={e => setNuevoProducto({...nuevoProducto, descripcion: e.target.value})}></textarea>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <input type="number" placeholder="Precio" required className="p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-pink-400 outline-none font-medium" onChange={e => setNuevoProducto({...nuevoProducto, precio: e.target.value})} />
+                                        <input type="number" placeholder="Stock" required className="p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-pink-400 outline-none font-medium" onChange={e => setNuevoProducto({...nuevoProducto, stock: e.target.value})} />
+                                    </div>
 
-                    <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <input name="titulo" value={formData.titulo} onChange={handleChange} placeholder="Título" className="md:col-span-2 p-4 bg-pink-50 rounded-2xl outline-none" required />
-                        <textarea name="descripcion" value={formData.descripcion} onChange={handleChange} placeholder="Descripción" className="md:col-span-2 p-4 bg-pink-50 rounded-2xl h-24 outline-none" />
-                        <input name="precio" type="number" value={formData.precio} onChange={handleChange} placeholder="Precio" className="p-4 bg-pink-50 rounded-2xl outline-none" required />
-                        <select name="categoria_id" value={formData.categoria_id} onChange={handleChange} className="p-4 bg-pink-50 rounded-2xl outline-none" required>
-                            <option value="">Categoría</option>
-                            {categorias.map(cat => <option key={cat.id} value={cat.id}>{cat.nombre}</option>)}
-                        </select>
-                        <input name="stock" type="number" value={formData.stock} onChange={handleChange} placeholder="Stock" className="p-4 bg-pink-50 rounded-2xl outline-none" />
-                        <input name="imagen_url" value={formData.imagen_url} onChange={handleChange} placeholder="URL Imagen" className="p-4 bg-pink-50 rounded-2xl outline-none" />
-                        <button type="submit" disabled={cargando} className="md:col-span-2 bg-pink-600 text-white font-black py-4 rounded-2xl uppercase tracking-widest hover:bg-pink-700 shadow-lg transition-all">
-                            {cargando ? 'Guardando...' : 'Confirmar y Publicar'}
-                        </button>
-                    </form>
+                                    <select required className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-pink-400 outline-none font-medium" onChange={e => setNuevoProducto({...nuevoProducto, categoria_id: e.target.value})}>
+                                        <option value="">Seleccionar Categoría</option>
+                                        {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                                    </select>
 
-                    {/* TABLA DE PRODUCTOS */}
-                    <div className="mt-16 overflow-x-auto">
-                        <table className="w-full text-left border-collapse bg-white rounded-2xl overflow-hidden shadow-sm">
-                            <thead>
-                                <tr className="bg-gray-800 text-white text-xs uppercase">
-                                    <th className="p-4">Imagen</th>
-                                    <th className="p-4">Título</th>
-                                    <th className="p-4">Precio</th>
-                                    <th className="p-4 text-center">Acción</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {productos.map(prod => (
-                                    <tr key={prod.id} className="border-b border-gray-50 hover:bg-pink-50 transition-colors">
-                                        <td className="p-4"><img src={prod.imagen_url} className="w-12 h-12 object-cover rounded-lg" alt="" /></td>
-                                        <td className="p-4 font-bold text-gray-700 text-sm">{prod.titulo}</td>
-                                        <td className="p-4 text-pink-600 font-black text-sm">${parseFloat(prod.precio).toLocaleString('es-AR')}</td>
-                                        <td className="p-4 text-center">
-                                            <button onClick={() => eliminarProducto(prod.id)} className="bg-red-500 text-white px-4 py-1 rounded-full text-[10px] font-bold uppercase">Borrar</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </>
-            ) : (
-                /* SECCIÓN: GESTIÓN DE VENTAS */
-                <div className="mt-4 overflow-x-auto">
-                    <h3 className="text-xl font-bold mb-6 text-gray-700 uppercase italic">Historial de Ventas</h3>
-                    <table className="w-full text-left border-collapse bg-white rounded-2xl overflow-hidden shadow-md">
-                        <thead>
-                            <tr className="bg-pink-600 text-white text-xs uppercase">
-                                <th className="p-4">Fecha</th>
-                                <th className="p-4">Cliente</th>
-                                <th className="p-4">Total</th>
-                                <th className="p-4">Estado</th>
-                                <th className="p-4">Referencia MP</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {ventas.map(venta => (
-                                <tr key={venta.id} className="border-b border-gray-50 hover:bg-gray-50">
-                                    <td className="p-4 text-sm text-gray-500">{new Date(venta.fecha).toLocaleDateString()}</td>
-                                    <td className="p-4 font-bold text-gray-700">{venta.cliente_nombre}</td>
-                                    <td className="p-4 font-black text-pink-600">${parseFloat(venta.total).toLocaleString('es-AR')}</td>
-                                    <td className="p-4">
-                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase ${venta.estado_pago === 'aprobado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                            {venta.estado_pago}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-[10px] text-gray-400 font-mono">{venta.mp_preference_id}</td>
-                                </tr>
-                            ))}
-                            {ventas.length === 0 && (
-                                <tr><td colSpan="5" className="p-10 text-center text-gray-400 italic">No se han registrado ventas todavía.</td></tr>
+                                    <div className="relative group">
+                                        <div className={`w-full h-32 border-2 border-dashed ${nuevoProducto.imagen_url ? 'border-green-400' : 'border-pink-200'} rounded-2xl flex flex-col items-center justify-center bg-pink-50/50 overflow-hidden`}>
+                                            {nuevoProducto.imagen_url ? (
+                                                <img src={nuevoProducto.imagen_url} className="w-full h-full object-cover" alt="Preview" />
+                                            ) : (
+                                                <span className="text-pink-400 text-xs font-bold uppercase tracking-widest text-center px-4">
+                                                    {cargando ? "Subiendo..." : "Click para subir imagen"}
+                                                </span>
+                                            )}
+                                            <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" className="w-full bg-slate-800 hover:bg-pink-600 text-white font-black py-4 rounded-2xl shadow-lg transition-all transform active:scale-95 uppercase tracking-widest text-xs">Guardar Globo</button>
+                                </form>
+                            ) : (
+                                <form onSubmit={guardarCategoria} className="space-y-4">
+                                    <input type="text" placeholder="Nombre de categoría" required className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-pink-400 outline-none font-medium" value={nuevaCategoria} onChange={e => setNuevaCategoria(e.target.value)} />
+                                    <button type="submit" className="w-full bg-pink-600 hover:bg-pink-700 text-white font-black py-4 rounded-2xl shadow-lg transition-all uppercase tracking-widest text-xs">Crear Categoría</button>
+                                </form>
                             )}
-                        </tbody>
-                    </table>
+                        </div>
+                    </motion.div>
+
+                    {/* Listado Principal */}
+                    <div className="lg:col-span-2">
+                        <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-100 min-h-[500px]">
+                            <h2 className="text-xl font-black uppercase mb-8 text-slate-700">Listado Activo</h2>
+                            <div className="space-y-4">
+                                {tab === 'productos' ? (
+                                    productos.map(p => (
+                                        <div key={p.id} className="flex items-center gap-4 p-4 bg-slate-50 rounded-3xl border border-white shadow-sm">
+                                            <img src={p.imagen_url} className="w-16 h-16 rounded-2xl object-cover" alt="" />
+                                            <div className="flex-1">
+                                                <p className="font-black text-slate-800 uppercase text-sm tracking-tight">{p.titulo}</p>
+                                                <p className="text-pink-600 font-bold text-xs">${parseFloat(p.precio).toLocaleString()}</p>
+                                            </div>
+                                            <button className="p-3 text-red-400 hover:text-red-600 transition-colors">🗑️</button>
+                                        </div>
+                                    ))
+                                ) : (
+                                    categorias.map(c => (
+                                        <div key={c.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-3xl border border-white shadow-sm">
+                                            <p className="font-bold text-slate-700 uppercase text-sm">{c.nombre}</p>
+                                            <button className="text-xs font-black text-red-400 uppercase tracking-widest">Eliminar</button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 };
